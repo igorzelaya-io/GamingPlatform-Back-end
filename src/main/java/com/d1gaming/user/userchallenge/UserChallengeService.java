@@ -1,15 +1,19 @@
 package com.d1gaming.user.userchallenge;
-import com.d1gaming.library.challenge.*;
-import com.d1gaming.library.user.*;
-import com.d1gaming.user.user.*;
-import com.d1gaming.user.firebaseconfig.*;
-import com.google.cloud.firestore.Firestore;
-import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+
+import com.d1gaming.library.challenge.Challenge;
+import com.d1gaming.library.user.User;
+import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.WriteBatch;
 public class UserChallengeService {
 
 	private final String USERCHALLENGE_COLLECTION = "userChallenges";

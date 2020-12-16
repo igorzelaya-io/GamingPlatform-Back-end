@@ -1,6 +1,7 @@
 package com.d1gaming.user.user;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,7 @@ public class UserController {
 		if(userName == null) {
 			return new ResponseEntity<>("Invalid Input",HttpStatus.BAD_REQUEST);
 		}
-		User user = userServ.getUserByName(userName);
+		Optional<User> user = userServ.getUserByUserName(userName);
 		if(user == null) {
 			return new ResponseEntity<>("User Not Found", HttpStatus.NOT_FOUND);
 		}

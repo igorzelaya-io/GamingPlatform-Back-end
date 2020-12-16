@@ -7,10 +7,9 @@ import java.util.concurrent.ExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.d1gaming.library.request.TeamInviteRequest;
-import com.d1gaming.library.request.TeamInviteRequestStatus;
 import com.d1gaming.library.team.Team;
-import com.d1gaming.library.tournament.Tournament;
+import com.d1gaming.library.team.TeamInviteRequest;
+import com.d1gaming.library.team.TeamInviteRequestStatus;
 import com.d1gaming.library.user.User;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
@@ -134,14 +133,26 @@ public class UserTeamService {
 				System.out.println("Update Time: " + result.getUpdateTime()));
 		if(userTeams.contains(userTeam) && teamUsers.contains(user)) {
 			teamInviteRequest.setRequestStatus(TeamInviteRequestStatus.ACCEPTED);
-			return "Invite accepted successfully.";
+			List<TeamInviteRequest> userInviteRequests = user.getUserTeamRequests();
+			int requestIndex = userInviteRequests.indexOf(teamInviteRequest);
+			if(requestIndex != -1) {
+				userInviteRequests.remove(requestIndex);
+				return "Invite accepted successfully.";
+			}
+			return "Invite not found.";
 		}
 		return "Invite could not be accepted.";
 	}
 	
 	public String declineTeamInvite(TeamInviteRequest teamInviteRequest) {
 		teamInviteRequest.setRequestStatus(TeamInviteRequestStatus.DECLINED); 
-		return "Invite declined.";
+		List<TeamInviteRequest> userRequests = teamInviteRequest.getRequestedUser().getUserTeamRequests();
+		int requestIndex = userRequests.indexOf(teamInviteRequest);
+		if(requestIndex != -1) {
+			userRequests.remove(requestIndex);
+			return "Invite declined.";
+		}
+		return "Invite not found.";
 	}
 	
 }

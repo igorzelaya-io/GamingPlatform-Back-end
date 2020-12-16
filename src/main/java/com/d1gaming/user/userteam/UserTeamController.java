@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.d1gaming.library.request.TeamInviteRequest;
 import com.d1gaming.library.team.Team;
+import com.d1gaming.library.team.TeamInviteRequest;
 
 @RestController
 @CrossOrigin(origins = "localhost:4200")
@@ -26,7 +26,7 @@ public class UserTeamController {
 	@Autowired
 	private UserTeamService userTeamService;
 	
-	@GetMapping(value = "/userTeamRequests")
+	@GetMapping(value = "/userTeams")
 	public ResponseEntity<?> getAllUserTeamRequests(@RequestParam(required = true)String userId) throws InterruptedException, ExecutionException{
 		List<TeamInviteRequest> userTeamRequests = userTeamService.getAllTeamRequests(userId);
 		if(userTeamRequests == null) {
@@ -41,9 +41,19 @@ public class UserTeamController {
 	}
 	
 	@GetMapping(value = "/userTeams/search", params = "userId")
-	public ResponseEntity<?> getUserTeam(@RequestParam(required = true)String userId,
-										 @RequestParam(required = true)String teamId) throws InterruptedException, ExecutionException{
+	public ResponseEntity<?> getUserTeamById(@RequestParam(required = true)String userId,
+										     @RequestParam(required = true)String teamId) throws InterruptedException, ExecutionException{
 		Optional<Team> userTeam = userTeamService.getUserTeamById(userId, teamId);
+		if(userTeam == null) {
+			return new ResponseEntity<>("Not found.", HttpStatus.NOT_FOUND);
+		}
+		return new ResponseEntity<>(userTeam, HttpStatus.OK);
+	}
+	
+	@GetMapping(value = "/userTeams/search", params="userName")
+	public ResponseEntity<?> getUserTeamByName(@RequestParam(required = true)String userId,
+											   @RequestParam(required = true)String teamName) throws InterruptedException, ExecutionException{
+		Optional<Team> userTeam = userTeamService.getUserTeamByName(userId, teamName);
 		if(userTeam == null) {
 			return new ResponseEntity<>("Not found.", HttpStatus.NOT_FOUND);
 		}
@@ -61,16 +71,6 @@ public class UserTeamController {
 			return new ResponseEntity<>(response, HttpStatus.EXPECTATION_FAILED);
 		}
 		return new ResponseEntity<>(response, HttpStatus.OK);
-	}
-	
-	@GetMapping(value = "/userTeams/search", params="userName")
-	public ResponseEntity<?> getUserTeamByName(@RequestParam(required = true)String userName,
-											   @RequestParam(required = true)String teamId) throws InterruptedException, ExecutionException{
-		Optional<Team> userTeam = userTeamService.getUserTeamByName(userName, teamId);
-		if(userTeam == null) {
-			return new ResponseEntity<>("Not found.", HttpStatus.NOT_FOUND);
-		}
-		return new ResponseEntity<>(userTeam, HttpStatus.OK);
 	}
 	
 	@PostMapping(value = "/userTeamRequests/accept")

@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.d1gaming.library.team.Team;
 import com.d1gaming.library.user.User;
 import com.d1gaming.library.user.UserStatus;
 import com.google.api.core.ApiFuture;
@@ -75,7 +74,9 @@ public class UserService {
 			//Since there is a unique email for each document,
 			//There will only be on User object on list, we will retrieve the first one.
 			for(User currUser: userLs) {
-				return Optional.of(currUser);
+				if(currUser.getUserStatusCode().equals(UserStatus.ACTIVE)) {	
+					return Optional.of(currUser);
+				}
 			}
 		}
 		return null;
@@ -91,13 +92,14 @@ public class UserService {
 			//Since there is a unique userName for each document,
 			//there will only be one User object on the list, we will retrieve the first one.
 			for(User currUser: userList) {
-				return Optional.of(currUser);
+				if(currUser.getUserStatusCode().equals(UserStatus.ACTIVE)) {
+					return Optional.of(currUser);
+				}
 			}
 		}
 		return null;
 	}
-
-	//Query for user by given userName. 
+	
 	public User getUserByName(String userName) throws InterruptedException, ExecutionException {
 		//Perform a query based on a user's Name.
 		Query query = getUsersCollection().whereEqualTo("userName", userName);
@@ -106,13 +108,14 @@ public class UserService {
 			List<User> userList = snapshot.toObjects(User.class);
 			//Since there is a unique userName for each document,
 			//there will only be one User object on the list, we will retrieve the first one.
-			for(User currUser : userList) {
-				return currUser;
+			for(User currUser: userList) {
+				if(currUser.getUserStatusCode().equals(UserStatus.ACTIVE)) {
+					return currUser;
+				}
 			}
 		}
 		return null;
 	}
-	
 	
 	//Get User by its auto-generated ID.
 	public User getUserById(String userId) throws InterruptedException, ExecutionException {
@@ -120,7 +123,9 @@ public class UserService {
 		if(reference.get().get().exists()) {
 			DocumentSnapshot snapshot = reference.get().get();
 			User user = snapshot.toObject(User.class);
-			return user;
+			if(user.getUserStatusCode().equals(UserStatus.ACTIVE)) {
+				return user;
+			}
 		}
 		return null;
 	}
@@ -145,7 +150,9 @@ public class UserService {
 			List<User> ls = new ArrayList<>();		
 			objects.forEach((obj) -> {
 				User currUser = obj.toObject(User.class);
-				ls.add(currUser);
+				if(currUser.getUserStatusCode().equals(UserStatus.ACTIVE)) {
+					ls.add(currUser);
+				}
 			});
 			return ls;
 		}	
@@ -169,7 +176,7 @@ public class UserService {
 			System.out.println("Update Time:" + response.getUpdateTime());
 		});
 		//Check if user did actually change status.
-		if(reference.get().get().toObject(User.class).getStatusCode().equals(UserStatus.ACTIVE)) {
+		if(reference.get().get().toObject(User.class).getUserStatusCode().equals(UserStatus.INACTIVE)) {
 			return "User with ID: " + "'" +  userId + "'" + " was deleted.";
 		}
 		return "User could not be deleted";
@@ -196,7 +203,7 @@ public class UserService {
 		WriteBatch batch = firestore.batch().update(reference,"userStatusCode",UserStatus.BANNED);
 		List<WriteResult> results = batch.commit().get();
 		results.forEach(response -> System.out.println("Update Time: " + response.getUpdateTime()));
-		if(reference.get().get().toObject(User.class).getStatusCode().equals(UserStatus.BANNED)) {
+		if(reference.get().get().toObject(User.class).getUserStatusCode().equals(UserStatus.BANNED)) {
 			return "User with ID: " + "'" + userId + "'"  + " was BANNED.";
 		}
 		return "User could not be BANNED.";
@@ -207,11 +214,14 @@ public class UserService {
 		final DocumentReference reference = getUsersCollection().document(user.getUserId());
 		DocumentSnapshot snapshot = reference.get().get();
 		if(snapshot.exists()) {	
-			WriteBatch batch = firestore.batch();	
-			batch.set(reference, user);
-			List<WriteResult> results = batch.commit().get();
-			results.forEach(response -> System.out.println("Update time: " + response.getUpdateTime()));
-			return "User updated successfully";
+			if(snapshot.toObject(User.class).getUserStatusCode().equals(UserStatus.ACTIVE)) {
+				WriteBatch batch = firestore.batch();	
+				batch.set(reference, user);
+				List<WriteResult> results = batch.commit().get();
+				results.forEach(response -> 
+					System.out.println("Update time: " + response.getUpdateTime()));
+				return "User updated successfully";
+			}
 		}
 		return "User not found.";
 	}
@@ -224,11 +234,10 @@ public class UserService {
 			return "User not found.";
 		}
 		WriteBatch batch = firestore.batch();
-		List<WriteResult> results = new ArrayList<>();
 		//These fields cannot be updated.
 		if(!objectField.equals("userName") && !objectField.equals("userCash") && !objectField.equals("userTokens") && !objectField.equals("userId")) {
 			batch.update(reference, objectField, replaceValue);
-			results = batch.commit().get();
+			List<WriteResult> results = batch.commit().get();
 			results.forEach(response -> {
 				System.out.println("Update time: " + response.getUpdateTime());	
 			});
@@ -238,7 +247,7 @@ public class UserService {
 			return response;
 		}
 		else {
-			return "This field canntot be updated.";
+			return "This field cannot be updated.";
 		}
 		return "User field could not be updated.";
 	}
@@ -246,42 +255,38 @@ public class UserService {
 		
 	//Update a user's userName depending of availability and token adquisition capacity. i.e. if user has enough tokens to pay fee.
 	public String updateUserName(String userId, String newUserName) throws InterruptedException, ExecutionException {
-		final DocumentReference reference = getUsersCollection().document(userId);
-		DocumentSnapshot snapshot = reference.get().get();
-		if(!snapshot.exists()) {
-			return "User not found.";
-		}
-		Query query = getUsersCollection().whereEqualTo("userName", newUserName);
-		QuerySnapshot querySnapshot = query.get().get();
-		//Evaluate if userName is already in use.
-		String response = "Username is already taken";
-		if(querySnapshot.isEmpty()) {
+		String response = "User not found.";
+		if(isActive(userId)) {	
+			final DocumentReference reference = getUserReference(userId);
+			Query query = getUsersCollection().whereEqualTo("userName", newUserName);
+			QuerySnapshot querySnapshot = query.get().get();
+			//Evaluate if userName is already in use.
+			response = "Username is already taken";
+			if(querySnapshot.isEmpty()) {
 				//Transaction to get() tokens and update() tokens.
 				ApiFuture<String> futureTransact = firestore.runTransaction(transaction -> {
 					DocumentSnapshot doc = transaction.get(reference).get();
 					double tokens = doc.getDouble("userTokens");
 					//evaluate if user holds more than one token
-					if(tokens >= 1) {
-						transaction.update(reference, "userTokens", tokens - 1);
+					if(tokens >= 100) {
+						transaction.update(reference, "userTokens", tokens - 100);
 						transaction.update(reference, "userName", newUserName);
 						return "Username updated to: '"+ newUserName +"'";
 					}
-					else {
-						throw new Exception("Not enough Tokens");
-					}
+					return "Not enough tokens.";
 				});
 				response = futureTransact.get();
+			}
 		}
 		return response;
 	}
 	
 	//update user Currency field.
 	public String updateUserCash(String userId, double cashQuantity) throws InterruptedException, ExecutionException {
-		final DocumentReference reference = getUsersCollection().document(userId);
-		DocumentSnapshot snapshot = reference.get().get();
+		final DocumentReference reference = getUserReference(userId);
 		String response = "User not found.";
 		//evaluate if document exists 
-		if(snapshot.exists()) {
+		if(isActive(userId)) {
 			ApiFuture<String> futureTransaction = firestore.runTransaction(transaction -> {
 				Map<String,Object> map = new HashMap<>();
 				map.put("userCash", FieldValue.increment(cashQuantity));
@@ -296,10 +301,10 @@ public class UserService {
 	
 	//Update user Token field.
 	public String updateUserTokens(String userId, double tokenQuantity) throws InterruptedException, ExecutionException {
-		final DocumentReference reference = getUsersCollection().document(userId);
+		final DocumentReference reference = getUserReference(userId);
 		String response = "User not found.";
 		//evaluate if user exists on collection.
-		if(reference.get().get().exists()) {
+		if(isActive(userId)) {
 			ApiFuture<String> futureTransaction = firestore.runTransaction(transaction -> {
 				Map<String,Object> map = new HashMap<>();
 				map.put("userTokens",tokenQuantity);
@@ -311,26 +316,12 @@ public class UserService {
 		}
 		return response;
 	}
-	
-	
-	//evaluate if given documentId exists on given collection.
-	public boolean isPresent(String userId,String collectionName) throws InterruptedException, ExecutionException {
-		DocumentReference reference = firestore.collection(collectionName).document(userId);
-		ApiFuture<DocumentSnapshot> snapshot = reference.get();
-		DocumentSnapshot document = snapshot.get();
-		if(!document.exists()) {
-			return false;
-		}
-		return true;
-	}
 
 	//Evaluate if given document's status corresponds to active.
-	public boolean isActive(String userId, String collectionName) throws InterruptedException, ExecutionException {
-		DocumentReference reference = firestore.collection(collectionName).document(userId);
-		ApiFuture<DocumentSnapshot> snapshot = reference.get();
-		DocumentSnapshot result = snapshot.get();
-		User user = result.toObject(User.class);	
-		if(user.getStatusCode().equals(UserStatus.ACTIVE)) {
+	public boolean isActive(String userId) throws InterruptedException, ExecutionException {
+		DocumentReference reference = getUserReference(userId);
+		DocumentSnapshot result = reference.get().get();
+		if(result.exists() && result.toObject(User.class).getUserStatusCode().equals(UserStatus.ACTIVE)) {
 			return true;
 		}
 		return false;

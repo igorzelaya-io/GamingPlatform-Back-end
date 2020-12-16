@@ -1,6 +1,5 @@
 package com.d1gaming.user.security;
 
-import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
