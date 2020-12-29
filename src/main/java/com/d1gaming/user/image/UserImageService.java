@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.d1gaming.library.image.ImageModel;
 import com.d1gaming.library.image.ImageUtils;
 import com.d1gaming.library.user.User;
+import com.d1gaming.library.user.UserStatus;
 import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
@@ -27,29 +28,42 @@ public class UserImageService {
 		return firestore.collection("users");
 	}
 	
-	public String saveUserImage(String userId, ImageModel image) throws InterruptedException, ExecutionException {
+	private DocumentReference getUserReference(String userId) {
+		return getUsersCollection().document(userId);
+	}
+	
+	private boolean isActive(String userId) throws InterruptedException, ExecutionException{
 		DocumentReference reference = getUsersCollection().document(userId);
-		if(!reference.get().get().exists()) {
-			return "User not found.";
+		DocumentSnapshot snapshot = reference.get().get();
+		if(snapshot.exists() && snapshot.toObject(User.class).getUserStatusCode().equals(UserStatus.ACTIVE)) {
+			return true;
 		}
-		ImageModel imageModel = new ImageModel(image.getImageName(),
-												image.getImageType(),ImageUtils.compressBytes(image.getImageByte()));
-		WriteBatch batch = firestore.batch();
-		batch.update(reference, "userImage", imageModel);
-		List<WriteResult> results = batch.commit().get();
-		results.forEach(result -> System.out.println("Update Time: " + result.getUpdateTime()));
-		return "Image saved successfully.";
+		return false;
+	}
+	
+	public String saveUserImage(String userId, ImageModel image) throws InterruptedException, ExecutionException {
+		if(isActive(userId)) {
+			DocumentReference reference = getUserReference(userId);
+			ImageModel imageModel = new ImageModel(image.getImageName(), image.getImageType(),
+													ImageUtils.compressBytes(image.getImageByte()));
+			WriteBatch batch = firestore.batch();
+			batch.update(reference, "userImage", imageModel);
+			List<WriteResult> results = batch.commit().get();
+			results.forEach(result -> System.out.println("Update Time: " + result.getUpdateTime()));
+			return "Image saved successfully.";
+		}
+		return "User not found.";
 	}
 	
 	public Optional<ImageModel> getUserImage(String userId) throws InterruptedException, ExecutionException {
-		DocumentReference reference = getUsersCollection().document(userId);
-		if(!reference.get().get().exists()) {
-			return null;
+		if(isActive(userId)) {
+			DocumentReference reference = getUserReference(userId);
+			DocumentSnapshot snapshot = reference.get().get();
+			ImageModel compressedImage = snapshot.toObject(User.class).getUserImage();
+			ImageModel decompressedImage = new ImageModel(compressedImage.getImageName(), compressedImage.getImageType(),
+															ImageUtils.decompressBytes(compressedImage.getImageByte()));
+			return Optional.of(decompressedImage);
 		}
-		DocumentSnapshot snapshot = reference.get().get();
-		ImageModel compressedImage = snapshot.toObject(User.class).getUserImage();
-		ImageModel decompressedImage = new ImageModel(compressedImage.getImageName(), compressedImage.getImageType(),
-														ImageUtils.decompressBytes(compressedImage.getImageByte()));
-		return Optional.of(decompressedImage);
-	}
+		return null;
+	}	
 }

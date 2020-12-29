@@ -46,7 +46,6 @@ public class RoleService {
 		return null;
 	}
 	
-	
 	//Get a Role given its ID.
 	public Role getRoleById(String roleId) throws InterruptedException, ExecutionException {
 		DocumentReference reference = getRolesCollection().document(roleId);

@@ -42,6 +42,6 @@ public class UserImageController {
 		if(userImage == null ) {
 			return new ResponseEntity<>(userImage, HttpStatus.NO_CONTENT);
 		}
-		return new ResponseEntity<>(userImage, HttpStatus.OK);
+		return new ResponseEntity<>(userImage.get(), HttpStatus.OK);
 	}
 }

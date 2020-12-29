@@ -22,6 +22,7 @@ public class UserTournamentService {
 		return firestore.collection(this.USER_TOURNAMENT_SUBCOLLECTION);
 	}
 	
+	//TODO
 	public void updateUserKillsOnTournament(String tournamentId) {
 		DocumentReference reference = getUserTournamentsSubcollection().document(tournamentId);
 		reference.addSnapshotListener(new EventListener<DocumentSnapshot>() {

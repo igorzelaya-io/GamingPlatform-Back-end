@@ -31,5 +31,4 @@ build/
 
 ### VS Code ###
 .vscode/
-application.properties
-/src/main/resources/static/gamingplatform-c922d-firebase-adminsdk-c25o8-06e92edfd5.json 
+resources/ 

@@ -26,18 +26,23 @@ public class UserTeamController {
 	@Autowired
 	private UserTeamService userTeamService;
 	
-	@GetMapping(value = "/userTeams")
+	@GetMapping(value = "/userTeamRequests")
 	public ResponseEntity<?> getAllUserTeamRequests(@RequestParam(required = true)String userId) throws InterruptedException, ExecutionException{
 		List<TeamInviteRequest> userTeamRequests = userTeamService.getAllTeamRequests(userId);
-		if(userTeamRequests == null) {
-			return new ResponseEntity<>("User not found.", HttpStatus.NOT_FOUND);
-		}
-		else if(userTeamRequests.isEmpty()) {
+		if(userTeamRequests.isEmpty()) {
 			return new ResponseEntity<>(userTeamRequests, HttpStatus.NO_CONTENT);
 		}
-		else {
-			return new ResponseEntity<>(userTeamRequests, HttpStatus.OK);
+		return new ResponseEntity<>(userTeamRequests, HttpStatus.OK);
+		
+	}
+	
+	@GetMapping(value = "/userTeams")
+	public ResponseEntity<?> getAllUserTeams(@RequestParam(required = true)String userId) throws InterruptedException, ExecutionException{
+		List<Team> userTeams = userTeamService.getAllUserTeams(userId);
+		if(userTeams.isEmpty()) {
+			return new ResponseEntity<>(userTeams, HttpStatus.NO_CONTENT);
 		}
+		return new ResponseEntity<>(userTeams, HttpStatus.OK);
 	}
 	
 	@GetMapping(value = "/userTeams/search", params = "userId")
@@ -47,7 +52,7 @@ public class UserTeamController {
 		if(userTeam == null) {
 			return new ResponseEntity<>("Not found.", HttpStatus.NOT_FOUND);
 		}
-		return new ResponseEntity<>(userTeam, HttpStatus.OK);
+		return new ResponseEntity<>(userTeam.get(), HttpStatus.OK);
 	}
 	
 	@GetMapping(value = "/userTeams/search", params="userName")
@@ -57,12 +62,12 @@ public class UserTeamController {
 		if(userTeam == null) {
 			return new ResponseEntity<>("Not found.", HttpStatus.NOT_FOUND);
 		}
-		return new ResponseEntity<>(userTeam, HttpStatus.OK);
+		return new ResponseEntity<>(userTeam.get(), HttpStatus.OK);
 	}
 	
 	@PostMapping(value = "/userTeams/exit")  
 	public ResponseEntity<?> exitTeam(@RequestParam(required = true)String userId,
-									  @RequestBody(required = true)String teamId) throws InterruptedException, ExecutionException{
+									  @RequestParam(required = true)String teamId) throws InterruptedException, ExecutionException{
 		String response = userTeamService.exitTeam(userId, teamId);
 		if(response.equals("Not found.")) {
 			return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
@@ -81,7 +86,7 @@ public class UserTeamController {
 				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 			case "User is already a member of this team.":
 				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-			case "Invite could not be accepted.":
+			case "Failed.":
 				return new ResponseEntity<>(response, HttpStatus.EXPECTATION_FAILED);
 			default:
 				return new ResponseEntity<>(response, HttpStatus.OK);
@@ -91,6 +96,9 @@ public class UserTeamController {
 	@PostMapping(value = "/userTeamRequests/decline")
 	public ResponseEntity<?> declineUserTeamRequest(@RequestBody(required = true)TeamInviteRequest request){
 		String response = userTeamService.declineTeamInvite(request);
+		if(response.equals("Invite not found.")) {
+			return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+		}	
 		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 	

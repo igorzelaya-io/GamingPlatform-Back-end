@@ -30,14 +30,11 @@ public class UserController {
 	@GetMapping(value = "/users/search",params="userName")
 	@PreAuthorize("hasRole('PLAYER')")
 	public ResponseEntity<Object> getUserByName(@RequestParam(value = "userName", required = true)final String userName) throws InterruptedException, ExecutionException{
-		if(userName == null) {
-			return new ResponseEntity<>("Invalid Input",HttpStatus.BAD_REQUEST);
-		}
 		Optional<User> user = userServ.getUserByUserName(userName);
 		if(user == null) {
 			return new ResponseEntity<>("User Not Found", HttpStatus.NOT_FOUND);
 		}
-		return new ResponseEntity<>(user,HttpStatus.OK);
+		return new ResponseEntity<>(user.get(),HttpStatus.OK);
 	}
 	
 	@GetMapping("/users")
