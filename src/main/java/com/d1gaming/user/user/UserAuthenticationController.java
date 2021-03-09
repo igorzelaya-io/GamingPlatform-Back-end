@@ -77,7 +77,7 @@ public class UserAuthenticationController {
 						,	registerRequest.getUserPassword(),registerRequest.getUserEmail(),UserStatus.ACTIVE,
 						registerRequest.getUserCountry(),registerRequest.getUserBirthDate()
 						);
-		List<String> strRoles = registerRequest.getAuthorities();
+		List<String> strRoles = registerRequest.getUserRoles();
 		List<Role> roles = new ArrayList<>();
 		if(strRoles == null) {
 			Role userRole = roleService.getRoleByType(ERole.ROLE_PLAYER)
